@@ -1,5 +1,5 @@
+from config import validate_and_get_docs_url, validate_and_get_selectors, load_config
 from retrieve import fetch_directory_structures
-import configparser
 
 
 def analyze_structure(structure_text):
@@ -132,16 +132,26 @@ def build_structure_string(structure, indent=0, comment_indent=30):
     return '\n'.join(lines)  # Join all lines into a single string.
 
 
+def normalize_layout_name(name):
+    """
+    Normalizes the layout name to be all lowercase with spaces replaced by hyphens.
+
+    Args:
+        name (str): The original layout name.
+
+    Returns:
+        str: The normalized layout name.
+    """
+    return name.lower().replace(' ', '-')
+
+
 def main():
     # Load configuration
-    config = configparser.ConfigParser()
-    config.read('../config.ini')
+    config = load_config('../config.ini')
 
-    # Extract configuration variables.
-    docs_url = config['DEFAULT']['DOCS_URL']
-    selectors = [selector.strip() for selector in config['DEFAULT']['SELECTORS'].split(',')]
-
-    # Fetch directory structures based on the provided URL and selectors.
+    # Fetch directory structures based on the provided URL and selectors
+    docs_url = validate_and_get_docs_url(config)
+    selectors = validate_and_get_selectors(config)
     structures = fetch_directory_structures(docs_url, selectors)
 
     # Assuming fetch_directory_structures returns a dict with keys being layout names

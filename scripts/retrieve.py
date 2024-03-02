@@ -1,5 +1,5 @@
+from config import validate_and_get_docs_url, validate_and_get_selectors, load_config
 from bs4 import BeautifulSoup
-import configparser
 import requests
 
 
@@ -51,19 +51,16 @@ def fetch_directory_structures(docs_url: str, selectors: list) -> dict:
 
 
 def main():
-    # Load configuration from config.ini
-    config_parser = configparser.ConfigParser()
-    config_parser.read('../config.ini')  # Adjust path as needed
+    # Load configuration
+    config = load_config('../config.ini')
 
-    # Retrieve configuration variables
-    docs_url_param = config_parser['DEFAULT']['DOCS_URL']
-    selectors_param = [selector.strip() for selector in config_parser['DEFAULT']['SELECTORS'].split(',')]
-
-    # Fetch directory structures
-    structures_retrieved = fetch_directory_structures(docs_url_param, selectors_param)
+    # Fetch directory structures based on the provided URL and selectors
+    docs_url = validate_and_get_docs_url(config)
+    selectors = validate_and_get_selectors(config)
+    structures = fetch_directory_structures(docs_url, selectors)
 
     # Display retrieved structures
-    for selector, structure in structures_retrieved.items():
+    for selector, structure in structures.items():
         if structure:
             print(f"\nStructure for {selector}:\n{structure}\n")
         else:
