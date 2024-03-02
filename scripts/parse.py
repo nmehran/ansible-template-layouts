@@ -1,7 +1,16 @@
 from retrieve import fetch_directory_structures
 
 
-def parse_structure(structure_text):
+def parse_structure(structure_text) -> list:
+    """
+    Parse directory structure text into a list of dictionaries.
+
+    Args:
+        structure_text (str): The directory structure text.
+
+    Returns:
+        list: List of dictionaries, each representing a directory or file.
+    """
     structure_lines = structure_text.strip().split('\n')
     parsed_structure = []
 
@@ -31,11 +40,24 @@ def parse_structure(structure_text):
 
 
 if __name__ == "__main__":
-    structures = fetch_directory_structures()
+    import configparser
+
+    # Load configuration
+    config = configparser.ConfigParser()
+    config.read('../config.ini')
+
+    # Configuration variables
+    docs_url = config['DEFAULT']['DOCS_URL']
+    selectors = [selector.strip() for selector in config['DEFAULT']['SELECTORS'].split(',')]
+
+    # Fetch directory structures
+    structures = fetch_directory_structures(docs_url, selectors)
+
     # Parsing the sample-directory-layout
     parsed_sample_layout = parse_structure(structures['sample-directory-layout'])
     print(parsed_sample_layout)
-    #
-    # # Parsing the alternative-directory-layout
+
+    # Uncomment below to parse additional directory layouts
+    # Parsing the alternative-directory-layout
     # parsed_alternative_layout = parse_structure(structures['alternative-directory-layout'])
     # print(parsed_alternative_layout)
