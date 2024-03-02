@@ -1,12 +1,13 @@
-import requests
 from bs4 import BeautifulSoup
+
+import requests
 import configparser
 
-# Create a ConfigParser object and read the config.ini file
+# Load configuration
 config = configparser.ConfigParser()
 config.read('../config.ini')
 
-# Accessing variables
+# Configuration variables
 docs_url = config['DEFAULT']['DOCS_URL']
 selectors = [selector.strip() for selector in config['DEFAULT']['SELECTORS'].split(',')]
 
@@ -21,11 +22,15 @@ def fetch_directory_structures():
     structures = {}
 
     for selector in selectors:
-        directory_structure_element = soup.find(id=selector)
-        if directory_structure_element:
-            structures[selector] = directory_structure_element.get_text()
+        # Find all <pre> elements within the 'highlight' class containers below a given section id
+        section = soup.find(id=selector)
+        if section:
+            code_blocks = section.find_all('div', class_='highlight')
+            structure_text = '\n'.join(pre.get_text() for block in code_blocks for pre in block.find_all('pre'))
+            structures[selector] = structure_text
         else:
-            print(f"No element found for selector: {selector}")
+            print(f"No section found for selector: {selector}")
+            structures[selector] = ""
 
     return structures
 
@@ -34,6 +39,6 @@ if __name__ == "__main__":
     structures = fetch_directory_structures()
     for selector, structure in structures.items():
         if structure:
-            print(f"Structure for {selector}:\n{structure}\n")
+            print(f"\nStructure for {selector}:\n{structure}\n")
         else:
             print(f"No structure found for {selector}.")

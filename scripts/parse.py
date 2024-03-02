@@ -1,37 +1,41 @@
-def parse_directory_structure(directory_structure):
-    """
-    Parses the directory structure string into a structured format.
+from retrieve import fetch_directory_structures
 
-    :param directory_structure: The directory structure as a string.
-    :return: A list of dictionaries representing the directory structure.
-    """
-    lines = directory_structure.split('\n')
-    tree = []
-    path_stack = []  # To keep track of current path based on indentation
 
-    for line in lines:
+def parse_structure(structure_text):
+    structure_lines = structure_text.strip().split('\n')
+    parsed_structure = []
+
+    for line in structure_lines:
         if not line.strip():
             continue  # Skip empty lines
 
-        # Determine the level of indentation (assuming 4 spaces per level)
-        level = (len(line) - len(line.lstrip())) // 4
-
-        # Extract the path and optional comment
-        parts = line.strip().split('#', 1)
+        # Split line into path and comment
+        parts = line.split('#', 1)
         path = parts[0].strip()
         comment = parts[1].strip() if len(parts) > 1 else ""
 
-        # Adjust the path stack based on the current level of indentation
-        path_stack = path_stack[:level]
-        path_stack.append(path)
+        # Determine if the current line represents a directory or a file
+        if path.endswith('/'):
+            item_type = 'directory'
+            path = path[:-1]  # Remove trailing slash for consistency
+        else:
+            item_type = 'file'
 
-        # Create a structured entry for this line
-        entry = {
-            "type": "file" if "." in path else "dir",
-            "path": "/".join(path_stack),
-            "comment": comment
-        }
+        parsed_structure.append({
+            'type': item_type,
+            'path': path,
+            'comment': comment
+        })
 
-        tree.append(entry)
+    return parsed_structure
 
-    return tree
+
+if __name__ == "__main__":
+    structures = fetch_directory_structures()
+    # Parsing the sample-directory-layout
+    parsed_sample_layout = parse_structure(structures['sample-directory-layout'])
+    print(parsed_sample_layout)
+    #
+    # # Parsing the alternative-directory-layout
+    # parsed_alternative_layout = parse_structure(structures['alternative-directory-layout'])
+    # print(parsed_alternative_layout)
