@@ -1,4 +1,5 @@
 from retrieve import fetch_directory_structures
+import configparser
 
 
 def analyze_structure(structure_text):
@@ -132,11 +133,9 @@ def build_structure_string(structure, indent=0, comment_indent=30):
 
 
 def main():
-    import configparser
-
-    # Load configuration from an external file to keep settings centralized and manageable.
+    # Load configuration
     config = configparser.ConfigParser()
-    config.read('../config.ini')  # Adjust the path as necessary.
+    config.read('../config.ini')
 
     # Extract configuration variables.
     docs_url = config['DEFAULT']['DOCS_URL']
