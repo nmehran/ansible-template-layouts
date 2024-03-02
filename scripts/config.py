@@ -2,8 +2,11 @@ import configparser
 from pathlib import Path
 from urllib.parse import urlparse
 
+CONFIG_PATH = "../config.ini"
+README_PATH = "../README.md"
 
-def load_config(config_path: str = 'config.ini') -> configparser.ConfigParser:
+
+def load_config(config_path: str = CONFIG_PATH) -> configparser.ConfigParser:
     """
     Loads the configuration file specified by `config_path`. This function initializes a
     ConfigParser object, checks for the existence of the configuration file, and then

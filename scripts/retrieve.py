@@ -1,4 +1,4 @@
-from config import validate_and_get_docs_url, validate_and_get_selectors, load_config
+from config import validate_and_get_docs_url, validate_and_get_selectors, load_config, CONFIG_PATH
 from bs4 import BeautifulSoup
 import requests
 
@@ -52,7 +52,7 @@ def fetch_directory_structures(docs_url: str, selectors: list) -> dict:
 
 def main():
     # Load configuration
-    config = load_config('../config.ini')
+    config = load_config(CONFIG_PATH)
 
     # Fetch directory structures based on the provided URL and selectors
     docs_url = validate_and_get_docs_url(config)

@@ -1,5 +1,6 @@
-from config import validate_and_get_docs_url, validate_and_get_selectors, load_config
+from config import validate_and_get_docs_url, validate_and_get_selectors, load_config, CONFIG_PATH
 from retrieve import fetch_directory_structures
+from datetime import datetime
 
 
 def analyze_structure(structure_text):
@@ -95,6 +96,33 @@ def parse_directory_structure(directory_text):
     return root['children']
 
 
+def normalize_layout_name(name):
+    """
+    Normalizes the layout name to be all lowercase with spaces replaced by hyphens.
+
+    Args:
+        name (str): The original layout name.
+
+    Returns:
+        str: The normalized layout name.
+    """
+    return name.lower().replace(' ', '-')
+
+
+def format_as_codeblock(content, language=''):
+    """
+    Formats the given content as a Markdown code block.
+
+    Args:
+        content (str): The content to format.
+        language (str): Optional language identifier for syntax highlighting.
+
+    Returns:
+        str: The formatted content as a Markdown code block.
+    """
+    return f"```{language}\n{content}\n```"
+
+
 def build_structure_string(structure, indent=0, comment_indent=30):
     """
     Recursively builds a string representation of the directory structure with aligned comments,
@@ -132,35 +160,49 @@ def build_structure_string(structure, indent=0, comment_indent=30):
     return '\n'.join(lines)  # Join all lines into a single string.
 
 
-def normalize_layout_name(name):
+def build_layout_sections_string(structures):
     """
-    Normalizes the layout name to be all lowercase with spaces replaced by hyphens.
+    Builds a single string containing all layout sections formatted as Markdown code blocks.
 
     Args:
-        name (str): The original layout name.
+        structures (dict): A dictionary with layout names as keys and directory structure text as values.
 
     Returns:
-        str: The normalized layout name.
+        str: A string containing all layout sections formatted as Markdown code blocks, separated by space.
     """
-    return name.lower().replace(' ', '-')
+    layout_sections = []
+    for layout_name, structure_text in structures.items():
+        # Ensure parse_directory_structure function returns the structured text
+        parsed_structure = parse_directory_structure(structure_text)
+        structure_string = build_structure_string(parsed_structure)
+        code_block = format_as_codeblock(structure_string)
+        layout_section = f"#### {layout_name}:\n\n{code_block}\n"
+        layout_sections.append(layout_section)
+
+    # Get the current date in YYYY-mm-dd format
+    last_update_date = datetime.now().strftime('%Y-%m-%d')
+
+    # Footer indicating the last update
+    footer = f"Last Change: {last_update_date}"
+
+    # Combine all layout sections with a space for separation and append the footer
+    full_content = "\n".join(layout_sections + [footer])
+
+    return full_content
 
 
 def main():
     # Load configuration
-    config = load_config('../config.ini')
+    config = load_config(CONFIG_PATH)
 
     # Fetch directory structures based on the provided URL and selectors
     docs_url = validate_and_get_docs_url(config)
     selectors = validate_and_get_selectors(config)
     structures = fetch_directory_structures(docs_url, selectors)
 
-    # Assuming fetch_directory_structures returns a dict with keys being layout names
-    # and values being the directory structure text.
-    for layout_name, structure_text in structures.items():
-        print(f"'{layout_name}':")
-        parsed_structure = parse_directory_structure(structure_text)
-        print(build_structure_string(parsed_structure))
-        print("\n---\n")  # Separator between different directory layouts.
+    # Format and print the structured layouts
+    formatted_sections = build_layout_sections_string(structures)
+    print(formatted_sections)
 
 
 if __name__ == "__main__":
