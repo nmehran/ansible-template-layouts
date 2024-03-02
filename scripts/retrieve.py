@@ -1,51 +1,59 @@
 from bs4 import BeautifulSoup
+import configparser
 import requests
 
 
 def fetch_directory_structures(docs_url: str, selectors: list) -> dict:
     """
-    Fetches directory structures from a webpage.
+    Fetches directory structures from a webpage, handling both CSS selectors and element IDs.
+    This function requests the webpage content, parses it, and then searches for specified
+    selectors to extract directory structures, typically contained within <pre> tags.
 
     Args:
-        docs_url (str): The URL of the webpage.
-        selectors (list): List of selectors to search for.
+        docs_url (str): The URL of the webpage from which to fetch directory structures.
+        selectors (list): A list of CSS selectors or element IDs to identify the sections
+                          containing the directory structures.
 
     Returns:
-        dict: Dictionary containing directory structures for each selector.
+        dict: A dictionary mapping each selector to its corresponding directory structure text.
+              If no content is found for a selector, it maps to an empty string.
+
+    Raises:
+        ConnectionError: If the HTTP request to fetch the webpage fails or returns a non-200 status code.
+        ValueError: If the provided selectors list is empty.
     """
-    # Fetch webpage content
-    response = requests.get(docs_url)
+    # Validate input
+    if not selectors:
+        raise ValueError("Selectors list cannot be empty.")
 
-    # Check if the request was successful
-    if response.status_code != 200:
-        raise ConnectionError(f"Failed to fetch the webpage, status code: {response.status_code}")
+    try:
+        response = requests.get(docs_url)
+        response.raise_for_status()  # This will raise an HTTPError for bad responses (4xx, 5xx)
+    except requests.exceptions.RequestException as e:
+        raise ConnectionError(f"Failed to fetch the webpage: {e}")
 
-    # Parse HTML content
+    # Parse the HTML content of the webpage
     soup = BeautifulSoup(response.content, 'html.parser')
     structures = {}
 
-    # Extract directory structures for each selector
     for selector in selectors:
-        section = soup.find(id=selector)
+        # Handle both CSS selectors and element IDs with a unified approach
+        section = soup.select_one(f'#{selector}' if str(selector[0]).isalnum() else selector)
         if section:
-            # Find all code blocks within the section
-            code_blocks = section.find_all('div', class_='highlight')
-            # Concatenate text from all <pre> tags within code blocks
-            structure_text = '\n'.join(pre.get_text() for block in code_blocks for pre in block.find_all('pre'))
-            structures[selector] = structure_text
+            # Assuming directory structures are within <pre> tags
+            structure_text = '\n'.join(pre.get_text() for pre in section.find_all('pre'))
+            structures[selector] = structure_text.strip()
         else:
-            print(f"No section found for selector: {selector}")
-            structures[selector] = ""
+            print(f"No content found for selector: '{selector}'.")
+            structures[selector] = ""  # Ensuring inclusion in the dictionary even if no content is found
 
     return structures
 
 
-if __name__ == "__main__":
-    import configparser
-
+def main():
     # Load configuration from config.ini
     config_parser = configparser.ConfigParser()
-    config_parser.read('../config.ini')
+    config_parser.read('../config.ini')  # Adjust path as needed
 
     # Retrieve configuration variables
     docs_url_param = config_parser['DEFAULT']['DOCS_URL']
@@ -60,3 +68,7 @@ if __name__ == "__main__":
             print(f"\nStructure for {selector}:\n{structure}\n")
         else:
             print(f"No structure found for {selector}.")
+
+
+if __name__ == "__main__":
+    main()
