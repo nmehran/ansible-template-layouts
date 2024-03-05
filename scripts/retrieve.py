@@ -1,5 +1,6 @@
 from config import validate_and_get_docs_url, validate_and_get_selectors, load_config, CONFIG_PATH
 from bs4 import BeautifulSoup
+import logging
 import requests
 
 
@@ -44,7 +45,7 @@ def fetch_directory_structures(docs_url: str, selectors: list) -> dict:
             structure_text = '\n'.join(pre.get_text() for pre in section.find_all('pre'))
             structures[selector] = structure_text.strip()
         else:
-            print(f"No content found for selector: '{selector}'.")
+            logging.info(f"No content found for selector: '{selector}'.")
             structures[selector] = ""  # Ensuring inclusion in the dictionary even if no content is found
 
     return structures
@@ -62,9 +63,9 @@ def main():
     # Display retrieved structures
     for selector, structure in structures.items():
         if structure:
-            print(f"\nStructure for {selector}:\n{structure}\n")
+            logging.info(f"\nStructure for {selector}:\n{structure}\n")
         else:
-            print(f"No structure found for {selector}.")
+            logging.info(f"No structure found for {selector}.")
 
 
 if __name__ == "__main__":

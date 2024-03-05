@@ -1,6 +1,7 @@
 from config import validate_and_get_docs_url, validate_and_get_selectors, load_config, CONFIG_PATH
 from retrieve import fetch_directory_structures
 from datetime import datetime
+import logging
 
 
 def analyze_structure(structure_text):
@@ -200,9 +201,9 @@ def main():
     selectors = validate_and_get_selectors(config)
     structures = fetch_directory_structures(docs_url, selectors)
 
-    # Format and print the structured layouts
+    # Format and log the structured layouts
     formatted_sections = build_layout_sections_string(structures)
-    print(formatted_sections)
+    logging.info(formatted_sections)
 
 
 if __name__ == "__main__":

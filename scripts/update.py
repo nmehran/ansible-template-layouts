@@ -7,6 +7,7 @@ from retrieve import fetch_directory_structures
 from pathlib import Path
 from shutil import rmtree
 import argparse
+import logging
 import os
 import re
 
@@ -80,7 +81,7 @@ def update_directory_structures(structures, base_path):
         parsed_structure = parse_directory_structure(structure_text)
         layout_base_path = base_path / 'templates' / normalized_name
         sync_template_layout(layout_base_path, parsed_structure)
-        print(f"Structure created for layout: {normalized_name}")
+        logging.info(f"Structure created for layout: {normalized_name}")
 
 
 def update_readme_with_structure(structures, readme_path="README.md"):
@@ -112,7 +113,7 @@ def update_readme_with_structure(structures, readme_path="README.md"):
     with open(readme_path, 'w', encoding='utf-8') as file:
         file.write(updated_content)
 
-    print("README updated with the latest directory structures.")
+    logging.info("README updated with the latest directory structures.")
 
 
 def main(force_updates=False):
