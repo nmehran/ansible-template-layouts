@@ -4,9 +4,6 @@ on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
-  push:
-    branches:
-      - master
 
 jobs:
   update-template-and-create-pr:
@@ -30,12 +27,13 @@ jobs:
         run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
 
       - name: Set Environment Branch Name
-        run: echo "NEW_BRANCH=auto-update-templates" >> $GITHUB_ENV
+        run: echo "AUTO_BRANCH=auto-update-templates" >> $GITHUB_ENV
 
-      - name: Create New Branch from Master
+      - name: Create or Update Branch from Master
         run: |
           git fetch origin
-          git checkout -b "$NEW_BRANCH" 2>/dev/null || git checkout "$NEW_BRANCH"
+          git checkout -b "${{ env.AUTO_BRANCH }}" 2>/dev/null || git checkout "${{ env.AUTO_BRANCH }}"
+          git pull origin "${{ env.AUTO_BRANCH }}" || true
 
       - name: Update Project
         if: success()
@@ -52,7 +50,7 @@ jobs:
         if: success()
         id: check-pr
         env:
-          NEW_BRANCH: ${{ env.NEW_BRANCH }}
+          AUTO_BRANCH: ${{ env.AUTO_BRANCH }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash ./.github/deployment/check_for_existing_pr.sh
 
@@ -70,7 +68,7 @@ jobs:
 
             For more details, please review the included changes.
           base: "master"  # This is the base branch you want to merge your PR into
-          branch: ${{ env.NEW_BRANCH }}  # This is the source branch from which the PR is created
+          branch: ${{ env.AUTO_BRANCH }}  # This is the source branch from which the PR is created
           assignees: ${{ github.actor }}  # This assigns the PR to the user who triggered the action
           reviewers: ${{ github.actor }}
           labels: auto-update,template-change,needs-review

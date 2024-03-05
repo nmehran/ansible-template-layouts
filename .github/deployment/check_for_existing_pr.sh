@@ -13,18 +13,18 @@ if [ -z "$GITHUB_TOKEN" ]; then
     exit 1
 fi
 
-if [ -z "$NEW_BRANCH" ]; then
-    echo "Error: NEW_BRANCH is not set."
+if [ -z "$AUTO_BRANCH" ]; then
+    echo "Error: AUTO_BRANCH is not set."
     exit 1
 fi
 
 # Configure the GitHub CLI to use the provided token
 export GITHUB_TOKEN
 
-echo "Checking for existing PR from '$NEW_BRANCH' to 'master'..."
+echo "Checking for existing PR from '$AUTO_BRANCH' to 'master'..."
 
-# Fetch the list of PRs from NEW_BRANCH to master, looking for the first one
-PR_DATA=$(gh pr list --head "$NEW_BRANCH" --base master --state all --json url,state,mergedAt --jq '.[0]')
+# Fetch the list of PRs from AUTO_BRANCH to master, looking for the first one
+PR_DATA=$(gh pr list --head "$AUTO_BRANCH" --base master --state all --json url,state,mergedAt --jq '.[0]')
 
 # Determine action based on the existence and state of the PR
 if [[ "$PR_DATA" == "" ]]; then

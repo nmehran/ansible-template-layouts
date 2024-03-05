@@ -2,8 +2,9 @@ import configparser
 from pathlib import Path
 from urllib.parse import urlparse
 
-CONFIG_PATH = "../config.ini"
-README_PATH = "../README.md"
+SCRIPT_DIR = Path(__file__).parent
+CONFIG_PATH = SCRIPT_DIR / ".." / "config.ini"
+README_PATH = SCRIPT_DIR / ".." / "README.md"
 
 
 def load_config(config_path: str = CONFIG_PATH) -> configparser.ConfigParser:
