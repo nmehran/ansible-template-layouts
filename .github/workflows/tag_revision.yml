@@ -6,8 +6,8 @@ on:
 
 jobs:
   check-merge-and-label:
-    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
     outputs:
       tag: ${{ steps.label-check.outputs.tag }}
     steps:
@@ -15,19 +15,24 @@ jobs:
         id: label-check
         run: |
           echo "Checking for labels..."
-          LABELS="${{ github.event.pull_request.labels.*.name }}"
+          LABELS=$(echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | jq -r '.[]')
+          AUTO_UPDATE_LABEL=$(echo "$LABELS" | grep -w "auto-update" || true)
+          TEMPLATE_CHANGE_LABEL=$(echo "$LABELS" | grep -w "template-change" || true)
+
           echo "Found labels: $LABELS"
-          # Check for both 'auto-update' and 'template-change' labels
-          if [[ "$LABELS" == *"auto-update"* && "$LABELS" == *"template-change"* ]]; then
-            echo "::set-output name=tag::true"
+
+          if [[ -n "$AUTO_UPDATE_LABEL" && -n "$TEMPLATE_CHANGE_LABEL" ]]; then
             echo "Both 'auto-update' and 'template-change' labels found. Proceeding with tagging."
+            echo "tag=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::set-output name=tag::false"
             echo "Required labels not found. Skipping tagging."
+            echo "tag=false" >> "$GITHUB_OUTPUT"
+          fi
 
   tag-version:
-    if: needs.check-merge-and-label.outputs.tag == 'true'
     runs-on: ubuntu-latest
+    needs: check-merge-and-label
+    if: needs.check-merge-and-label.outputs.tag == 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -41,7 +46,7 @@ jobs:
           # Fetch the date of the last commit on the PR branch before the merge
           PR_LAST_COMMIT_DATE=$(git log -1 --format=%cI)
           echo "Last PR commit date: $PR_LAST_COMMIT_DATE"
-          echo "::set-output name=date::$PR_LAST_COMMIT_DATE"
+          echo "date=$PR_LAST_COMMIT_DATE" >> "$GITHUB_OUTPUT"
 
       - name: Tag New Version with PR Last Commit Date
         run: |
