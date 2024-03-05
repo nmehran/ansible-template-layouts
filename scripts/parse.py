@@ -180,14 +180,8 @@ def build_layout_sections_string(structures):
         layout_section = f"#### {layout_name}:\n\n{code_block}\n"
         layout_sections.append(layout_section)
 
-    # Get the current date in YYYY-mm-dd format
-    last_update_date = datetime.now().strftime('%Y-%m-%d')
-
-    # Footer indicating the last update
-    footer = f"Last Change: {last_update_date}"
-
     # Combine all layout sections with a space for separation and append the footer
-    full_content = "\n".join(layout_sections + [footer])
+    full_content = "\n".join(layout_sections)
 
     return full_content
 
