@@ -1,0 +1,53 @@
+name: Tag Revision
+
+on:
+  pull_request:
+    types: [closed]  # Trigger when a pull request is closed
+
+jobs:
+  check-merge-and-label:
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.label-check.outputs.tag }}
+    steps:
+      - name: Check for specific labels
+        id: label-check
+        run: |
+          echo "Checking for labels..."
+          LABELS="${{ github.event.pull_request.labels.*.name }}"
+          echo "Found labels: $LABELS"
+          # Check for both 'auto-update' and 'template-change' labels
+          if [[ "$LABELS" == *"auto-update"* && "$LABELS" == *"template-change"* ]]; then
+            echo "::set-output name=tag::true"
+            echo "Both 'auto-update' and 'template-change' labels found. Proceeding with tagging."
+          else
+            echo "::set-output name=tag::false"
+            echo "Required labels not found. Skipping tagging."
+
+  tag-version:
+    if: needs.check-merge-and-label.outputs.tag == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for all branches and tags
+
+      - name: Get Last Commit Date of the PR
+        id: last-pr-commit-date
+        run: |
+          # Assuming the PR was merged into the default branch (e.g., main or master)
+          # Fetch the date of the last commit on the PR branch before the merge
+          PR_LAST_COMMIT_DATE=$(git log -1 --format=%cI)
+          echo "Last PR commit date: $PR_LAST_COMMIT_DATE"
+          echo "::set-output name=date::$PR_LAST_COMMIT_DATE"
+
+      - name: Tag New Version with PR Last Commit Date
+        run: |
+          # Use the date of the last PR commit for the tag
+          TAG_DATE=$(date -u -d "${{ steps.last-pr-commit-date.outputs.date }}" +"%Y.%m.%d")
+          NEW_TAG="v$TAG_DATE"
+          echo "Creating new tag: $NEW_TAG"
+          git tag $NEW_TAG
+          git push origin $NEW_TAG

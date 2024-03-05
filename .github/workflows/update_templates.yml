@@ -1,0 +1,108 @@
+name: Update Ansible Templates
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  update-template-and-create-pr:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: '**/requirements.txt'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Set Environment Date Key
+        run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+
+      - name: Set Environment Branch Name
+        run: echo "NEW_BRANCH=auto-update-templates" >> $GITHUB_ENV
+
+      - name: Update Project
+        if: success()
+        run: python ./scripts/update.py --update-readme --update-directories
+
+      - name: Commit and Push Changes
+        if: success()
+        env:
+          NEW_BRANCH: ${{ env.NEW_BRANCH }}
+          DATE: $(date +'%Y/%m/%d')
+        run: |
+          git checkout -b ${{ env.NEW_BRANCH }} || git checkout ${{ env.NEW_BRANCH }}
+          git pull origin ${{ env.NEW_BRANCH }} || true  # Attempt to pull, but proceed if it fails
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+          git add .
+          git commit -m "update: automated - Ansible project templates [${{ env.DATE }}]" || echo "No changes to commit"
+          git push origin refs/heads/${{ env.NEW_BRANCH }} || echo "No changes to push"
+
+      - name: Fetch branches
+        run: git fetch origin
+
+      - name: Check for Existing Pull Request
+        if: success()
+        id: check-pr
+        env:
+          NEW_BRANCH: ${{ env.NEW_BRANCH }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_DATA=$(gh pr list --head $NEW_BRANCH --base master --state all --json url,state,mergedAt --jq '.[0]')
+          if [[ "$PR_DATA" == "" ]]; then
+            echo "No existing PR found. Proceeding with PR creation."
+            echo "should_create_pr=yes" >> $GITHUB_ENV
+          else
+            STATE=$(echo $PR_DATA | jq -r '.state')
+            MERGED_AT=$(echo $PR_DATA | jq -r '.mergedAt')
+            if [[ "$STATE" == "closed" && "$MERGED_AT" == "null" ]]; then
+              echo "Existing PR is closed and not merged. Skipping PR creation."
+              echo "should_create_pr=no" >> $GITHUB_ENV
+            elif [[ "$STATE" == "open" ]]; then
+              echo "Existing PR is open. Skipping PR creation."
+              echo "should_create_pr=no" >> $GITHUB_ENV
+            else
+              echo "Existing PR is either merged or not applicable. Proceeding with PR creation."
+              echo "should_create_pr=yes" >> $GITHUB_ENV
+            fi
+          fi
+
+#      - name: Log Git Branch State
+#        run: |
+#          echo "Current Branch:"
+#          git branch --show-current
+#          echo "Last 3 Commits:"
+#          git log -3 --oneline
+#          echo "Git Status:"
+#          git status
+
+      - name: Create Pull Request
+        if: success()
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Update Ansible Project Structure to Latest Guidelines [${{ env.DATE }}]"
+          body: |
+            This automated PR updates the `ansible-template-skeletons` project directory structure to align with the latest official Ansible documentation as of ${{ env.DATE }}.
+
+            ### Changes Included:
+            - Updated templates to reflect the latest documentation standards.
+
+            For more details, please review the included changes.
+          base: "master"  # This is the base branch you want to merge your PR into
+          branch: ${{ env.NEW_BRANCH }}  # This is the source branch from which the PR is created
+          assignees: ${{ github.actor }}  # This assigns the PR to the user who triggered the action
+          reviewers: ${{ github.actor }}
+          labels: auto-update,template-change,needs-review
