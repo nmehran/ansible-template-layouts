@@ -32,23 +32,18 @@ jobs:
       - name: Set Environment Branch Name
         run: echo "NEW_BRANCH=auto-update-templates" >> $GITHUB_ENV
 
+      - name: Create New Branch from Master
+        run: |
+          git fetch origin
+          git checkout -b "$NEW_BRANCH" 2>/dev/null || git checkout "$NEW_BRANCH"
+
       - name: Update Project
         if: success()
         run: python ./scripts/update.py --update-readme --update-directories
 
       - name: Commit and Push Changes
         if: success()
-        env:
-          NEW_BRANCH: ${{ env.NEW_BRANCH }}
-          DATE: $(date +'%Y/%m/%d')
-        run: |
-          git checkout -b ${{ env.NEW_BRANCH }} || git checkout ${{ env.NEW_BRANCH }}
-          git pull origin ${{ env.NEW_BRANCH }} || true  # Attempt to pull, but proceed if it fails
-          git config --global user.email "action@github.com"
-          git config --global user.name "GitHub Action"
-          git add .
-          git commit -m "update: automated - Ansible project templates [${{ env.DATE }}]" || echo "No changes to commit"
-          git push origin refs/heads/${{ env.NEW_BRANCH }} || echo "No changes to push"
+        run: bash ./.github/deployment/commit_and_push.sh
 
       - name: Fetch branches
         run: git fetch origin
@@ -59,34 +54,7 @@ jobs:
         env:
           NEW_BRANCH: ${{ env.NEW_BRANCH }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PR_DATA=$(gh pr list --head $NEW_BRANCH --base master --state all --json url,state,mergedAt --jq '.[0]')
-          if [[ "$PR_DATA" == "" ]]; then
-            echo "No existing PR found. Proceeding with PR creation."
-            echo "should_create_pr=yes" >> $GITHUB_ENV
-          else
-            STATE=$(echo $PR_DATA | jq -r '.state')
-            MERGED_AT=$(echo $PR_DATA | jq -r '.mergedAt')
-            if [[ "$STATE" == "closed" && "$MERGED_AT" == "null" ]]; then
-              echo "Existing PR is closed and not merged. Skipping PR creation."
-              echo "should_create_pr=no" >> $GITHUB_ENV
-            elif [[ "$STATE" == "open" ]]; then
-              echo "Existing PR is open. Skipping PR creation."
-              echo "should_create_pr=no" >> $GITHUB_ENV
-            else
-              echo "Existing PR is either merged or not applicable. Proceeding with PR creation."
-              echo "should_create_pr=yes" >> $GITHUB_ENV
-            fi
-          fi
-
-#      - name: Log Git Branch State
-#        run: |
-#          echo "Current Branch:"
-#          git branch --show-current
-#          echo "Last 3 Commits:"
-#          git log -3 --oneline
-#          echo "Git Status:"
-#          git status
+        run: bash ./.github/deployment/check_for_existing_pr.sh
 
       - name: Create Pull Request
         if: success()
