@@ -1,17 +1,20 @@
-from config import validate_and_get_docs_url, validate_and_get_selectors, find_project_root, load_config, CONFIG_PATH, README_PATH
+from config import (
+    validate_and_get_docs_url, validate_and_get_selectors, find_project_root, load_config, CONFIG_PATH, README_PATH
+)
 from parse import build_layout_sections_string, normalize_layout_name, parse_directory_structure
 from retrieve import fetch_directory_structures
 
 from pathlib import Path
+from shutil import rmtree
 import argparse
 import os
 import re
 
 
-def create_template_structure(base_path, structure, write_comments=True):
+def sync_template_layout(base_path, structure, write_comments=True):
     """
-    Recursively creates a directory structure at the specified base path according to the
-    given structure.
+    Synchronizes the directory structure at the specified base path according to the
+    given structure, removing files and directories not present in the structure.
 
     Args:
         base_path (str or Path): The base path where the directory structure starts.
@@ -24,21 +27,44 @@ def create_template_structure(base_path, structure, write_comments=True):
     # Create the base directory if it doesn't exist
     base_path.mkdir(parents=True, exist_ok=True)
 
-    # Iterate through the structure to create directories and files
-    for item in structure:
-        current_path = base_path / item['path']
-        if item['type'] == 'directory':
-            # Create directory
-            current_path.mkdir(parents=True, exist_ok=True)
-            if 'children' in item:
-                # Recursively create subdirectories/files
-                create_template_structure(current_path, item['children'], write_comments=write_comments)
-        elif item['type'] == 'file':
-            # Create file
-            with current_path.open('w') as file:
-                # Optionally write the comment at the top of the file
-                if write_comments and item['comment']:
-                    file.write(f"# {item['comment']}\n")
+    # Track paths that should exist according to the structure
+    expected_paths = set()
+
+    def create_or_update(base_path_, structure_):
+        """
+        Recursively creates or updates the directory and file structure based on the given
+        structure definition. Directories are created if they don't exist, and files are
+        either created or updated if they already exist and need to have comments added.
+        """
+        for item in structure_:
+            current_path = base_path_ / item['path']
+            expected_paths.add(current_path)
+
+            if item['type'] == 'directory':
+                current_path.mkdir(parents=True, exist_ok=True)
+                if 'children' in item:
+                    create_or_update(current_path, item['children'])
+            elif item['type'] == 'file':
+                if not current_path.exists() or (write_comments and 'comment' in item):
+                    with current_path.open('w') as file:
+                        if write_comments and 'comment' in item:
+                            file.write(f"# {item['comment']}\n")
+
+    create_or_update(base_path, structure)
+
+    def remove_unexpected(base_path_):
+        """
+        Removes files and directories that are not part of the expected structure
+        defined by the synchronization process.
+        """
+        for child in base_path_.iterdir():
+            if child not in expected_paths:
+                if child.is_dir():
+                    rmtree(child)
+                else:
+                    child.unlink()
+
+    remove_unexpected(base_path)
 
 
 def update_directory_structures(structures, base_path):
@@ -53,7 +79,7 @@ def update_directory_structures(structures, base_path):
         normalized_name = normalize_layout_name(layout_name)
         parsed_structure = parse_directory_structure(structure_text)
         layout_base_path = base_path / 'templates' / normalized_name
-        create_template_structure(layout_base_path, parsed_structure)
+        sync_template_layout(layout_base_path, parsed_structure)
         print(f"Structure created for layout: {normalized_name}")
 
 
@@ -137,4 +163,4 @@ def main(force_updates=False):
 
 
 if __name__ == "__main__":
-    main()
+    main(force_updates=True)
