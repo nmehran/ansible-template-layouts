@@ -1,6 +1,11 @@
-from config import validate_and_get_docs_url, validate_and_get_selectors, load_config, CONFIG_PATH
+from config import (
+    CONFIG_PATH,
+    load_config,
+    validate_and_get_docs_url,
+    validate_and_get_selectors,
+)
 from retrieve import fetch_directory_structures
-from datetime import datetime
+
 import logging
 
 

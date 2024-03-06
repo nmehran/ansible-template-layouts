@@ -1,7 +1,16 @@
 from config import (
-    validate_and_get_docs_url, validate_and_get_selectors, find_project_root, load_config, CONFIG_PATH, README_PATH
+    CONFIG_PATH,
+    README_PATH,
+    find_project_root,
+    load_config,
+    validate_and_get_docs_url,
+    validate_and_get_selectors,
 )
-from parse import build_layout_sections_string, normalize_layout_name, parse_directory_structure
+from parse import (
+    build_layout_sections_string,
+    normalize_layout_name,
+    parse_directory_structure,
+)
 from retrieve import fetch_directory_structures
 
 from pathlib import Path
