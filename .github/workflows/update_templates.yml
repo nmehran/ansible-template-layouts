@@ -27,8 +27,9 @@ jobs:
 
       - name: Configure Environment
         run: |
-          echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
           echo "AUTO_BRANCH=auto-update-templates" >> $GITHUB_ENV
+          echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+          echo "DATE_FMT=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
       - name: Configure Git
         run: |
@@ -80,8 +81,8 @@ jobs:
       - name: Create Pull Request
         if: env.CREATE_PR == 'true'
         run: |
-          PR_TITLE="Update Ansible Project Structure to Latest Guidelines [${{ env.DATE }}]"
-          PR_BODY="This automated PR updates the \`ansible-template-skeletons\` project directory structure to align with the latest official Ansible documentation as of ${{ env.DATE }}.
+          PR_TITLE="Update Ansible Project Structure to Latest Guidelines [${{ env.DATE_FMT }}]"
+          PR_BODY="This automated PR updates the \`ansible-template-skeletons\` project directory structure to align with the latest official Ansible documentation as of ${{ env.DATE_FMT }}.
 
           ### Changes Included:
           - Updated templates to reflect the latest documentation standards.
