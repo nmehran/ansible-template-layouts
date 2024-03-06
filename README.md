@@ -1,7 +1,7 @@
-# Ansible Template Skeletons
+# Ansible Template Layouts
 
 ## Overview
-`ansible-template-skeletons` is an automated tool designed to keep your Ansible project's directory structure in sync with the latest recommendations from the official Ansible documentation. Utilizing GitHub Actions, this project checks the Ansible documentation daily for changes in the recommended project layout and automatically updates this repository to reflect those changes, ensuring best practices are always followed.
+`ansible-template-layouts` is an automated tool designed to keep your Ansible project's directory structure in sync with the latest recommendations from the official Ansible documentation. Utilizing GitHub Actions, this project checks the Ansible documentation daily for changes in the recommended project layout and automatically updates this repository to reflect those changes, ensuring best practices are always followed.
 
 ## Features
 - **Automated Updates**: Leverages GitHub Actions to regularly check the Ansible documentation for any updates or changes in the directory structure.

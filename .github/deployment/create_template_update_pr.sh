@@ -19,7 +19,7 @@ fi
 PR_TITLE="Update Ansible Project Structure to Latest Guidelines [${DATE_FMT}]"
 
 # Construct the body of the pull request
-PR_BODY="This automated PR updates the \`ansible-template-skeletons\` project directory structure to align with the latest official Ansible documentation as of ${DATE_FMT}.
+PR_BODY="This automated PR updates the \`ansible-template-layouts\` project directory structure to align with the latest official Ansible documentation as of ${DATE_FMT}.
 
 ### Changes Included:
 - Updated templates to reflect the latest documentation standards.
