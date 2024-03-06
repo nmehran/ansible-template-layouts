@@ -164,4 +164,4 @@ def main(force_updates=False):
 
 
 if __name__ == "__main__":
-    main(force_updates=True)
+    main()
