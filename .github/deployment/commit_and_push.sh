@@ -1,33 +1,47 @@
 #!/bin/bash
 
-# This script automates the process of committing and pushing changes to a specified branch.
-# It assumes the branch is already created and checked out, and it is up-to-date with the master branch.
+# Description:
+# Automates staging, committing, and pushing changes to a branch. It checks for
+# unstaged changes, stages any changes found, commits them with a standardized
+# message, and attempts to push to the remote branch, setting a flag for PR creation.
+#
+# Assumptions:
+# - The branch is already checked out and up-to-date with the target branch.
+# - Required environment variables: AUTO_BRANCH and optionally DATE_FMT.
 
-# Exit immediately if any command exits with a non-zero status.
-set -e
+set -e  # Exit immediately if a command exits with a non-zero status.
 
-# Ensure AUTO_BRANCH is provided
+# Ensure required variables are present
 if [ -z "$AUTO_BRANCH" ]; then
-  echo "AUTO_BRANCH environment variable is not set. Exiting..."
+  echo "Error: AUTO_BRANCH not set. Exiting..."
   exit 1
 fi
 
-# Stage all changes for commit.
 echo "Staging changes..."
 git add .
 
-# Check if there are any changes staged for commit. If not, exit the script.
+# Check for staged changes, exiting if none found
 if git diff --staged --quiet; then
   echo "No changes to commit. Exiting..."
   echo "CREATE_PR=false" >> "$GITHUB_ENV"
   exit 0
 fi
 
-# If the script reaches this point, there are changes to commit.
 echo "Committing changes..."
-git commit -m "update: automated - Ansible project templates [${DATE}]"
-echo "Changes committed."
+COMMIT_MESSAGE="update: automated - Ansible project templates [${DATE_FMT:-$(date +%Y-%m-%d)}]"
+git commit -m "$COMMIT_MESSAGE"
+echo "Committed with message: '$COMMIT_MESSAGE'"
 
-# Attempt to push changes to the remote branch, creating it if it doesn't exist.
-echo "Pushing changes to '${AUTO_BRANCH}'..."
-git push --force origin "refs/heads/${AUTO_BRANCH}:${AUTO_BRANCH}" || git push --set-upstream origin "refs/heads/${AUTO_BRANCH}"
+# Attempt to push changes to the specified branch
+echo "Pushing to '$AUTO_BRANCH'..."
+if git push --force origin "refs/heads/$AUTO_BRANCH" || \
+   git push --set-upstream origin "$AUTO_BRANCH"; then
+  echo "Push successful."
+  CREATE_PR="true"
+else
+  echo "Push failed."
+  CREATE_PR="false"
+fi
+
+# Set CREATE_PR flag for subsequent steps
+echo "CREATE_PR=$CREATE_PR" >> "$GITHUB_ENV"

@@ -51,7 +51,7 @@ jobs:
         run: bash ./.github/deployment/commit_and_push.sh
 
       - name: Check for Existing Pull Request
-        if: env.CREATE_PR != 'false'
+        if: env.CREATE_PR == 'true'
         id: check-pr
         run: bash ./.github/deployment/check_for_existing_pr.sh
         env:
@@ -59,44 +59,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Ensure Labels Exist
-        run: |
-          # Define label names, descriptions, and colors
-          declare -A labels
-          labels["auto-update"]="Indicates an automatic update:ededed"
-          labels["template-change"]="Marks changes to template files:bfd4f2"
-          labels["needs-review"]="Requires review from maintainers:ffadad"
-      
-          for label in "${!labels[@]}"; do
-            IFS=':' read -r description color <<< "${labels[$label]}"
-            if ! gh label view "$label" &> /dev/null; then
-              echo "Creating label: $label"
-              gh label create "$label" --description "$description" --color "$color"
-            else
-              echo "Label '$label' already exists."
-            fi
-          done
+        if: env.CREATE_PR == 'true'
+        run: bash ./.github/deployment/ensure_github_labels.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Pull Request
         if: env.CREATE_PR == 'true'
-        run: |
-          PR_TITLE="Update Ansible Project Structure to Latest Guidelines [${{ env.DATE_FMT }}]"
-          PR_BODY="This automated PR updates the \`ansible-template-skeletons\` project directory structure to align with the latest official Ansible documentation as of ${{ env.DATE_FMT }}.
-
-          ### Changes Included:
-          - Updated templates to reflect the latest documentation standards.
-
-          For more details, please review the included changes."
-
-          # Create a pull request
-          gh pr create \
-            --title "$PR_TITLE" \
-            --body "$PR_BODY" \
-            --base master \
-            --head ${{ env.AUTO_BRANCH }} \
-            --assignee ${{ github.actor }} \
-            --reviewer ${{ github.actor }} \
-            --label "auto-update,template-change,needs-review"
+        run: bash ./.github/deployment/create_template_update_pr.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
