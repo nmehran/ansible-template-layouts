@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for all branches and tags
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -23,52 +25,57 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Set Environment Date Key
-        run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
-
-      - name: Set Environment Branch Name
-        run: echo "AUTO_BRANCH=auto-update-templates" >> $GITHUB_ENV
-
-      - name: Create or Update Branch from Master
+      - name: Configure Environment
         run: |
-          git fetch origin
-          git checkout -b "${{ env.AUTO_BRANCH }}" 2>/dev/null || git checkout "${{ env.AUTO_BRANCH }}"
-          git pull origin "${{ env.AUTO_BRANCH }}" || true
+          echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+          echo "AUTO_BRANCH=auto-update-templates" >> $GITHUB_ENV
+
+      - name: Configure Git
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "GitHub Action"
+
+      - name: Fetch and Update Branches
+        run: |
+          git fetch --no-tags --prune --depth=1 origin +refs/heads/*:refs/remotes/origin/*
+          git checkout master
+          git pull origin master
+          git checkout "${{ env.AUTO_BRANCH }}" || git checkout -b "${{ env.AUTO_BRANCH }}" origin/master
+          git rebase master -X theirs
 
       - name: Update Project
-        if: success()
         run: python ./scripts/update.py --update-readme --update-directories
 
       - name: Commit and Push Changes
-        if: success()
         run: bash ./.github/deployment/commit_and_push.sh
 
-      - name: Fetch branches
-        run: git fetch origin
-
       - name: Check for Existing Pull Request
-        if: success()
+        if: env.CREATE_PR != 'false'
         id: check-pr
+        run: bash ./.github/deployment/check_for_existing_pr.sh
         env:
           AUTO_BRANCH: ${{ env.AUTO_BRANCH }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bash ./.github/deployment/check_for_existing_pr.sh
 
       - name: Create Pull Request
-        if: success()
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "Update Ansible Project Structure to Latest Guidelines [${{ env.DATE }}]"
-          body: |
-            This automated PR updates the `ansible-template-skeletons` project directory structure to align with the latest official Ansible documentation as of ${{ env.DATE }}.
+        if: env.CREATE_PR == 'true'
+        run: |
+          PR_TITLE="Update Ansible Project Structure to Latest Guidelines [${{ env.DATE }}]"
+          PR_BODY="This automated PR updates the \`ansible-template-skeletons\` project directory structure to align with the latest official Ansible documentation as of ${{ env.DATE }}.
 
-            ### Changes Included:
-            - Updated templates to reflect the latest documentation standards.
+          ### Changes Included:
+          - Updated templates to reflect the latest documentation standards.
 
-            For more details, please review the included changes.
-          base: "master"  # This is the base branch you want to merge your PR into
-          branch: ${{ env.AUTO_BRANCH }}  # This is the source branch from which the PR is created
-          assignees: ${{ github.actor }}  # This assigns the PR to the user who triggered the action
-          reviewers: ${{ github.actor }}
-          labels: auto-update,template-change,needs-review
+          For more details, please review the included changes."
+
+          # Create a pull request
+          gh pr create \
+            --title "$PR_TITLE" \
+            --body "$PR_BODY" \
+            --base master \
+            --head ${{ env.AUTO_BRANCH }} \
+            --assignee ${{ github.actor }} \
+            --reviewer ${{ github.actor }} \
+            --label "auto-update,template-change,needs-review"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

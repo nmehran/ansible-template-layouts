@@ -12,10 +12,6 @@ if [ -z "$AUTO_BRANCH" ]; then
   exit 1
 fi
 
-# Configure Git with the GitHub Actions bot's email and name for commit attribution.
-git config --global user.email "action@github.com"
-git config --global user.name "GitHub Action"
-
 # Stage all changes for commit.
 echo "Staging changes..."
 git add .
@@ -23,6 +19,7 @@ git add .
 # Check if there are any changes staged for commit. If not, exit the script.
 if git diff --staged --quiet; then
   echo "No changes to commit. Exiting..."
+  echo "CREATE_PR=false" >> "$GITHUB_ENV"
   exit 0
 fi
 
@@ -31,7 +28,6 @@ echo "Committing changes..."
 git commit -m "update: automated - Ansible project templates [${DATE}]"
 echo "Changes committed."
 
-# Push the commit to the remote repository.
-echo "Pushing changes to '$AUTO_BRANCH'..."
-git push --set-upstream origin "refs/heads/$AUTO_BRANCH" || echo "No changes to push."
-echo "Update process completed successfully."
+# Attempt to push changes to the remote branch, creating it if it doesn't exist.
+echo "Pushing changes to '${AUTO_BRANCH}'..."
+git push --force origin "refs/heads/${AUTO_BRANCH}:${AUTO_BRANCH}" || git push --set-upstream origin "refs/heads/${AUTO_BRANCH}"

@@ -1,42 +1,45 @@
 #!/bin/bash
 
-# This script checks for an existing pull request (PR) from a specified branch to the master branch.
-# It uses the GitHub CLI to query for existing PRs and sets an environment variable to indicate
-# whether a new PR should be created.
-
 # Exit immediately if any command exits with a non-zero status.
 set -e
 
 # Check prerequisites
 if [ -z "$GITHUB_TOKEN" ]; then
-    echo "Error: GITHUB_TOKEN is not set."
-    exit 1
+  echo "Error: GITHUB_TOKEN is not set."
+  exit 1
 fi
 
 if [ -z "$AUTO_BRANCH" ]; then
-    echo "Error: AUTO_BRANCH is not set."
-    exit 1
+  echo "Error: AUTO_BRANCH is not set."
+  exit 1
 fi
-
-# Configure the GitHub CLI to use the provided token
-export GITHUB_TOKEN
 
 echo "Checking for existing PR from '$AUTO_BRANCH' to 'master'..."
 
 # Fetch the list of PRs from AUTO_BRANCH to master, looking for the first one
-PR_DATA=$(gh pr list --head "$AUTO_BRANCH" --base master --state all --json url,state,mergedAt --jq '.[0]')
+PR_DATA=$(gh pr list --base master --head "$AUTO_BRANCH" --state all --json number,state --jq '.[0]')
 
-# Determine action based on the existence and state of the PR
-if [[ "$PR_DATA" == "" ]]; then
-    echo "No existing PR found. Proceeding with PR creation."
+# Check if there's any PR data
+if [[ -z "$PR_DATA" ]]; then
+  echo "No existing PR found. Proceeding with PR creation."
+  echo "CREATE_PR=true" >> "$GITHUB_ENV"
 else
-    STATE=$(echo "$PR_DATA" | jq -r '.state')
-    MERGED_AT=$(echo "$PR_DATA" | jq -r '.mergedAt')
-    if [[ "$STATE" == "closed" && "$MERGED_AT" == "null" ]]; then
-        echo "Existing PR is closed and not merged. Skipping PR creation."
-    elif [[ "$STATE" == "open" ]]; then
-        echo "Existing PR is open. Skipping PR creation."
+  PR_NUMBER=$(echo "$PR_DATA" | jq -r .number)
+  STATE=$(echo "$PR_DATA" | jq -r .state)
+
+  # Check if the existing PR is open
+  if [[ "$STATE" == "open" ]]; then
+    echo "Existing PR is open. Skipping PR creation."
+    echo "CREATE_PR=false" >> "$GITHUB_ENV"
+  else
+    # For closed PRs, check if they were merged
+    MERGED_AT=$(gh pr view $PR_NUMBER --json mergedAt | jq -r '.mergedAt')
+    if [[ "$MERGED_AT" != "null" ]]; then
+      echo "Existing PR is closed and merged. Proceeding with PR creation."
+      echo "CREATE_PR=true" >> "$GITHUB_ENV"
     else
-        echo "Existing PR is either merged or not applicable. Proceeding with PR creation."
+      echo "Existing PR is closed and not merged. Skipping PR creation."
+      echo "CREATE_PR=false" >> "$GITHUB_ENV"
     fi
+  fi
 fi
