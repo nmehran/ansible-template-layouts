@@ -57,6 +57,26 @@ jobs:
           AUTO_BRANCH: ${{ env.AUTO_BRANCH }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Ensure Labels Exist
+        run: |
+          # Define label names, descriptions, and colors
+          declare -A labels
+          labels["auto-update"]="Indicates an automatic update:ededed"
+          labels["template-change"]="Marks changes to template files:bfd4f2"
+          labels["needs-review"]="Requires review from maintainers:ffadad"
+      
+          for label in "${!labels[@]}"; do
+            IFS=':' read -r description color <<< "${labels[$label]}"
+            if ! gh label view "$label" &> /dev/null; then
+              echo "Creating label: $label"
+              gh label create "$label" --description "$description" --color "$color"
+            else
+              echo "Label '$label' already exists."
+            fi
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create Pull Request
         if: env.CREATE_PR == 'true'
         run: |
